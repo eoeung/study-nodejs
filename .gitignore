@@ -1,0 +1,7 @@
+# 모듈
+/node_modules
+package.json
+package-lock.json
+
+# 중요 정보
+security.js
