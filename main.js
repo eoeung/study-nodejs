@@ -9,6 +9,15 @@ var qs = require('querystring');
 var template = require('./lib/template.js');
 var path = require('path');
 var sanitizeHtml = require('sanitize-html'); // https://www.npmjs.com/package/sanitize-html
+// MySQL
+var mysql = require('mysql');
+var db = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: 'admin',
+  database: 'opentutorials',
+});
+db.connect();
 
 var app = http.createServer(function (req, res) {
   let _url = req.url;
@@ -21,10 +30,12 @@ var app = http.createServer(function (req, res) {
   if (pathname === '/') {
     // 쿼리스트링에서 id값이 없는 경우
     if (queryData.id === undefined) {
-      fs.readdir('./data', function (err, fileList) {
+      db.query('SELECT * FROM topic', function (err, topics, fields) {
+        if (err) throw err;
+
         let title = 'welcome';
         let description = 'Hello, Node.js !';
-        let list = template.list(fileList);
+        let list = template.list(topics);
         let html = template.HTML(
           title,
           list,
@@ -137,16 +148,13 @@ var app = http.createServer(function (req, res) {
   } else if (pathname === '/update') {
     fs.readdir('./data', function (err, fileList) {
       let filteredId = path.parse(queryData.id).base;
-      fs.readFile(
-        `./data/${filteredId}`,
-        'utf8',
-        function (err, description) {
-          let title = queryData.id;
-          let list = template.list(fileList);
-          let html = template.HTML(
-            title,
-            list,
-            `<form action="/update_process" method="post">
+      fs.readFile(`./data/${filteredId}`, 'utf8', function (err, description) {
+        let title = queryData.id;
+        let list = template.list(fileList);
+        let html = template.HTML(
+          title,
+          list,
+          `<form action="/update_process" method="post">
                 <input type="hidden" name="id" value="${title}">
                 <p>
                     <input type="text" name="title" placeholder="title" value="${title}">
@@ -158,12 +166,11 @@ var app = http.createServer(function (req, res) {
                     <input type="submit">
                 </p>
             </form>`,
-            `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`
-          );
-          res.writeHead(200);
-          res.end(html);
-        }
-      );
+          `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`
+        );
+        res.writeHead(200);
+        res.end(html);
+      });
     });
     // 수정 처리
   } else if (pathname === '/update_process') {
